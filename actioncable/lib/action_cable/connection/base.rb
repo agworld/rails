@@ -197,12 +197,24 @@ module ActionCable
         end
 
         def allow_request_origin?
-          return true if server.config.disable_request_forgery_protection
+          logger.info "[CABLE] allow_request_origin?"
+          logger.info "[CABLE] server.config.disable_request_forgery_protection = #{server.config.disable_request_forgery_protection}"
+          logger.info "[CABLE] server.config.allow_same_origin_as_host = #{server.config.allow_same_origin_as_host}"
+          logger.info "[CABLE] env['HTTP_ORIGIN'] = #{env['HTTP_ORIGIN']}"
+          logger.info "[CABLE] env['HTTP_HOST'] = #{env['HTTP_HOST']}"
+          logger.info "[CABLE] server.config.allowed_request_origins = #{server.config.allowed_request_origins.inspect}"
+
+          if server.config.disable_request_forgery_protection
+            logger.info "returning true because request forgery protection is disabled"
+            return true
+          end
 
           proto = Rack::Request.new(env).ssl? ? "https" : "http"
           if server.config.allow_same_origin_as_host && env["HTTP_ORIGIN"] == "#{proto}://#{env['HTTP_HOST']}"
+            logger.info "returning true because allow same origin and origin and host match"
             true
           elsif Array(server.config.allowed_request_origins).any? { |allowed_origin|  allowed_origin === env["HTTP_ORIGIN"] }
+            logger.info "returning true because origin is in allowed_request_origins"
             true
           else
             logger.error("Request origin not allowed: #{env['HTTP_ORIGIN']}")
